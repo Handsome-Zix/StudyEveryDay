@@ -426,3 +426,130 @@ fun1.bind({id: 'Obj'})();   // 'Global'
 **（7）箭头函数没有prototype**
 
 **（8）箭头函数不能用作Generator函数，不能使用yeild关键字**
+
+### 10. ajax、axios、fetch的区别
+
+**（1）AJAX**
+
+Ajax 即“AsynchronousJavascriptAndXML”（异步 JavaScript 和 XML），是指一种创建交互式应用的网页开发技术。它是一种在无需重新加载整个网页的情况下，能够更新部分网页的技术。通过在后台与服务器进行少量数据交换，Ajax 可以使网页实现异步更新。这意味着可以在不重新加载整个网页的情况下，对网页的某部分进行更新。传统的网页（不使用 Ajax）如果需要更新内容，必须重载整个网页页面。其缺点如下：
+
+- 本身是针对MVC编程，不符合前端MVVM的浪潮
+- 基于原生XHR开发，XHR本身的架构不清晰
+- 不符合关注分离（Separation of Concerns）的原则
+- 配置和调用方式非常混乱，而且基于事件的异步模型不友好。
+
+
+
+**（2）Fetch**
+
+fetch号称是AJAX的替代品，是在ES6出现的，使用了ES6中的promise对象。Fetch是基于promise设计的。Fetch的代码结构比起ajax简单多。**fetch不是ajax的进一步封装，而是原生js，没有使用XMLHttpRequest对象**。
+
+
+
+fetch的优点：
+
+- 语法简洁，更加语义化
+- 基于标准 Promise 实现，支持 async/await
+- 更加底层，提供的API丰富（request, response）
+- 脱离了XHR，是ES规范里新的实现方式
+
+fetch的缺点：
+
+- fetch只对网络请求报错，对400，500都当做成功的请求，服务器返回 400，500 错误码时并不会 reject，只有网络错误这些导致请求不能完成时，fetch 才会被 reject。
+- fetch默认不会带cookie，需要添加配置项： fetch(url, {credentials: 'include'})
+- fetch不支持abort，不支持超时控制，使用setTimeout及Promise.reject的实现的超时控制并不能阻止请求过程继续在后台运行，造成了流量的浪费
+- fetch没有办法原生监测请求的进度，而XHR可以
+
+
+
+**（3）Axios**
+
+Axios 是一种基于Promise封装的HTTP客户端，其特点如下：
+
+- 浏览器端发起XMLHttpRequests请求
+- node端发起http请求
+- 支持Promise API
+- 监听请求和返回
+- 对请求和返回进行转化
+- 取消请求
+- 自动转换json数据
+- 客户端支持抵御XSRF攻击
+
+### 11. 如何使用for...of遍历对象 
+
+for…of是作为ES6新增的遍历方式，允许遍历一个含有iterator接口的数据结构（数组、对象等）并且返回各项的值，普通的对象用for..of遍历是会报错的。
+
+
+
+如果需要遍历的对象是类数组对象，用Array.from转成数组即可。
+
+```
+var obj = {
+    0:'one',
+    1:'two',
+    length: 2
+};
+obj = Array.from(obj);
+for(var k of obj){
+    console.log(k)
+}
+```
+
+如果不是类数组对象，就给对象添加一个[Symbol.iterator]属性，并指向一个迭代器即可。
+
+```
+//方法一：
+var obj = {
+    a:1,
+    b:2,
+    c:3
+};
+
+obj[Symbol.iterator] = function(){
+    var keys = Object.keys(this);
+    var count = 0;
+    return {
+        next(){
+            if(count<keys.length){
+                return {value: obj[keys[count++]],done:false};
+            }else{
+                return {value:undefined,done:true};
+            }
+        }
+    }
+};
+
+for(var k of obj){
+    console.log(k);
+}
+
+
+// 方法二
+var obj = {
+    a:1,
+    b:2,
+    c:3
+};
+obj[Symbol.iterator] = function*(){
+    var keys = Object.keys(obj);
+    for(var k of keys){
+        yield [k,obj[k]]
+    }
+};
+
+for(var [k,v] of obj){
+    console.log(k,v);
+}
+```
+
+### 12. for...in和for...of的区别 
+
+for…of 是ES6新增的遍历方式，允许遍历一个含有iterator接口的数据结构（数组、对象等）并且返回各项的值，和ES3中的for…in的区别如下
+
+- for…of 遍历获取的是对象的键值，for…in 获取的是对象的键名；
+- for… in 会遍历对象的整个原型链，性能非常差不推荐使用，而 for … of 只遍历当前对象不会遍历原型链；
+- 对于数组的遍历，for…in 会返回数组中所有可枚举的属性(包括原型链上可枚举的属性)，for…of 只返回数组的下标对应的属性值；
+
+
+
+**总结：**for...in 循环主要是为了遍历对象而生，不适用于遍历数组；for...of 循环可以用来遍历数组、类数组对象，字符串、Set、Map 以及 Generator 对象。

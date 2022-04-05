@@ -736,3 +736,367 @@ doIt();
 ```
 
 结果和之前的 Promise 实现是一样的，但是这个代码看起来是不是清晰得多，几乎跟同步代码一样
+
+###  16. Promise的基本用法
+#### （1）创建Promise对象
+
+Promise对象代表一个异步操作，有三种状态：pending（进行中）、fulfilled（已成功）和rejected（已失败）。
+
+
+
+Promise构造函数接受一个函数作为参数，该函数的两个参数分别是`resolve`和`reject`。
+
+```
+const promise = new Promise(function(resolve, reject) {
+  // ... some code
+  if (/* 异步操作成功 */){
+    resolve(value);
+  } else {
+    reject(error);
+  }
+});
+```
+
+**一般情况下都会使用**`**new Promise()**`**来创建promise对象，但是也可以使用**`**promise.resolve**`**和** `**promise.reject**`**这两个方法：**
+
+- **Promise.resolve**
+
+`Promise.resolve(value)`的返回值也是一个promise对象，可以对返回值进行.then调用，代码如下：
+
+```
+Promise.resolve(11).then(function(value){
+  console.log(value); // 打印出11
+});
+```
+
+`resolve(11)`代码中，会让promise对象进入确定(`resolve`状态)，并将参数`11`传递给后面的`then`所指定的`onFulfilled` 函数；
+
+
+
+创建promise对象可以使用`new Promise`的形式创建对象，也可以使用`Promise.resolve(value)`的形式创建promise对象；
+
+- **Promise.reject**
+
+`Promise.reject` 也是`new Promise`的快捷形式，也创建一个promise对象。代码如下：
+
+```
+Promise.reject(new Error(“我错了，请原谅俺！！”));
+```
+
+就是下面的代码new Promise的简单形式：
+
+```
+new Promise(function(resolve,reject){
+   reject(new Error("我错了，请原谅俺！！"));
+});
+```
+
+下面是使用resolve方法和reject方法：
+
+```
+function testPromise(ready) {
+  return new Promise(function(resolve,reject){
+    if(ready) {
+      resolve("hello world");
+    }else {
+      reject("No thanks");
+    }
+  });
+};
+// 方法调用
+testPromise(true).then(function(msg){
+  console.log(msg);
+},function(error){
+  console.log(error);
+});
+```
+
+上面的代码的含义是给`testPromise`方法传递一个参数，返回一个promise对象，如果为`true`的话，那么调用promise对象中的`resolve()`方法，并且把其中的参数传递给后面的`then`第一个函数内，因此打印出 “`hello world`”, 如果为`false`的话，会调用promise对象中的`reject()`方法，则会进入`then`的第二个函数内，会打印`No thanks`；
+
+#### （2）Promise方法
+
+Promise有五个常用的方法：then()、catch()、all()、race()、finally。下面就来看一下这些方法。
+
+1. **then()**
+
+当Promise执行的内容符合成功条件时，调用`resolve`函数，失败就调用`reject`函数。Promise创建完了，那该如何调用呢？
+
+```
+promise.then(function(value) {
+  // success
+}, function(error) {
+  // failure
+});
+```
+
+`then`方法可以接受两个回调函数作为参数。第一个回调函数是Promise对象的状态变为`resolved`时调用，第二个回调函数是Promise对象的状态变为`rejected`时调用。其中第二个参数可以省略。
+
+`then`方法返回的是一个新的Promise实例（不是原来那个Promise实例）。因此可以采用链式写法，即`then`方法后面再调用另一个then方法。
+
+
+
+当要写有顺序的异步事件时，需要串行时，可以这样写：
+
+```
+let promise = new Promise((resolve,reject)=>{
+    ajax('first').success(function(res){
+        resolve(res);
+    })
+})
+promise.then(res=>{
+    return new Promise((resovle,reject)=>{
+        ajax('second').success(function(res){
+            resolve(res)
+        })
+    })
+}).then(res=>{
+    return new Promise((resovle,reject)=>{
+        ajax('second').success(function(res){
+            resolve(res)
+        })
+    })
+}).then(res=>{
+    
+})
+```
+
+那当要写的事件没有顺序或者关系时，还如何写呢？可以使用`all` 方法来解决。
+
+**2. catch()**
+
+Promise对象除了有then方法，还有一个catch方法，该方法相当于`then`方法的第二个参数，指向`reject`的回调函数。不过`catch`方法还有一个作用，就是在执行`resolve`回调函数时，如果出现错误，抛出异常，不会停止运行，而是进入`catch`方法中。
+
+```
+p.then((data) => {
+     console.log('resolved',data);
+},(err) => {
+     console.log('rejected',err);
+     }
+); 
+p.then((data) => {
+    console.log('resolved',data);
+}).catch((err) => {
+    console.log('rejected',err);
+});
+```
+
+**3. all()**
+
+`all`方法可以完成并行任务， 它接收一个数组，数组的每一项都是一个`promise`对象。当数组中所有的`promise`的状态都达到`resolved`的时候，`all`方法的状态就会变成`resolved`，如果有一个状态变成了`rejected`，那么`all`方法的状态就会变成`rejected`。
+
+```
+javascript
+let promise1 = new Promise((resolve,reject)=>{
+    setTimeout(()=>{
+       resolve(1);
+    },2000)
+});
+let promise2 = new Promise((resolve,reject)=>{
+    setTimeout(()=>{
+       resolve(2);
+    },1000)
+});
+let promise3 = new Promise((resolve,reject)=>{
+    setTimeout(()=>{
+       resolve(3);
+    },3000)
+});
+Promise.all([promise1,promise2,promise3]).then(res=>{
+    console.log(res);
+    //结果为：[1,2,3] 
+})
+```
+
+调用`all`方法时的结果成功的时候是回调函数的参数也是一个数组，这个数组按顺序保存着每一个promise对象`resolve`执行时的值。
+
+**（4）race()**
+
+`race`方法和`all`一样，接受的参数是一个每项都是`promise`的数组，但是与`all`不同的是，当最先执行完的事件执行完之后，就直接返回该`promise`对象的值。如果第一个`promise`对象状态变成`resolved`，那自身的状态变成了`resolved`；反之第一个`promise`变成`rejected`，那自身状态就会变成`rejected`。
+
+```
+let promise1 = new Promise((resolve,reject)=>{
+    setTimeout(()=>{
+       reject(1);
+    },2000)
+});
+let promise2 = new Promise((resolve,reject)=>{
+    setTimeout(()=>{
+       resolve(2);
+    },1000)
+});
+let promise3 = new Promise((resolve,reject)=>{
+    setTimeout(()=>{
+       resolve(3);
+    },3000)
+});
+Promise.race([promise1,promise2,promise3]).then(res=>{
+    console.log(res);
+    //结果：2
+},rej=>{
+    console.log(rej)};
+)
+```
+
+那么`race`方法有什么实际作用呢？当要做一件事，超过多长时间就不做了，可以用这个方法来解决：
+
+```
+Promise.race([promise1,timeOutPromise(5000)]).then(res=>{})
+```
+
+**5. finally()**
+
+`finally`方法用于指定不管 Promise 对象最后状态如何，都会执行的操作。该方法是 ES2018 引入标准的。
+
+```
+promise
+.then(result => {···})
+.catch(error => {···})
+.finally(() => {···});
+```
+
+上面代码中，不管`promise`最后的状态，在执行完`then`或`catch`指定的回调函数以后，都会执行`finally`方法指定的回调函数。
+
+
+
+下面是一个例子，服务器使用 Promise 处理请求，然后使用`finally`方法关掉服务器。
+
+```
+server.listen(port)
+  .then(function () {
+    // ...
+  })
+  .finally(server.stop);
+```
+
+`finally`方法的回调函数不接受任何参数，这意味着没有办法知道，前面的 Promise 状态到底是`fulfilled`还是`rejected`。这表明，`finally`方法里面的操作，应该是与状态无关的，不依赖于 Promise 的执行结果。`finally`本质上是`then`方法的特例：
+
+```
+promise
+.finally(() => {
+  // 语句
+});
+// 等同于
+promise
+.then(
+  result => {
+    // 语句
+    return result;
+  },
+  error => {
+    // 语句
+    throw error;
+  }
+);
+```
+
+上面代码中，如果不使用`finally`方法，同样的语句需要为成功和失败两种情况各写一次。有了`finally`方法，则只需要写一次。
+
+###  17. setTimeout、setInterval、requestAnimationFrame 各有什么特点？
+
+异步编程当然少不了定时器了，常见的定时器函数有 `setTimeout`、`setInterval`、`requestAnimationFrame`。最常用的是`setTimeout`，很多人认为 `setTimeout` 是延时多久，那就应该是多久后执行。
+
+
+
+其实这个观点是错误的，因为 JS 是单线程执行的，如果前面的代码影响了性能，就会导致 `setTimeout` 不会按期执行。当然了，可以通过代码去修正 `setTimeout`，从而使定时器相对准确：
+
+```
+let period = 60 * 1000 * 60 * 2
+let startTime = new Date().getTime()
+let count = 0
+let end = new Date().getTime() + period
+let interval = 1000
+let currentInterval = interval
+function loop() {
+  count++
+  // 代码执行所消耗的时间
+  let offset = new Date().getTime() - (startTime + count * interval);
+  let diff = end - new Date().getTime()
+  let h = Math.floor(diff / (60 * 1000 * 60))
+  let hdiff = diff % (60 * 1000 * 60)
+  let m = Math.floor(hdiff / (60 * 1000))
+  let mdiff = hdiff % (60 * 1000)
+  let s = mdiff / (1000)
+  let sCeil = Math.ceil(s)
+  let sFloor = Math.floor(s)
+  // 得到下一次循环所消耗的时间
+  currentInterval = interval - offset 
+  console.log('时：'+h, '分：'+m, '毫秒：'+s, '秒向上取整：'+sCeil, '代码执行时间：'+offset, '下次循环间隔'+currentInterval) 
+  setTimeout(loop, currentInterval)
+}
+setTimeout(loop, currentInterval)
+```
+
+接下来看 `setInterval`，其实这个函数作用和 `setTimeout` 基本一致，只是该函数是每隔一段时间执行一次回调函数。
+
+
+
+通常来说不建议使用 `setInterval`。第一，它和 `setTimeout` 一样，不能保证在预期的时间执行任务。第二，它存在执行累积的问题，请看以下伪代码
+
+```
+function demo() {
+  setInterval(function(){
+    console.log(2)
+  },1000)
+  sleep(2000)
+}
+demo()
+```
+
+以上代码在浏览器环境中，如果定时器执行过程中出现了耗时操作，多个回调函数会在耗时操作结束以后同时执行，这样可能就会带来性能上的问题。
+
+
+
+如果有循环定时器的需求，其实完全可以通过 `requestAnimationFrame` 来实现：
+
+```
+function setInterval(callback, interval) {
+  let timer
+  const now = Date.now
+  let startTime = now()
+  let endTime = startTime
+  const loop = () => {
+    timer = window.requestAnimationFrame(loop)
+    endTime = now()
+    if (endTime - startTime >= interval) {
+      startTime = endTime = now()
+      callback(timer)
+    }
+  }
+  timer = window.requestAnimationFrame(loop)
+  return timer
+}
+let a = 0
+setInterval(timer => {
+  console.log(1)
+  a++
+  if (a === 3) cancelAnimationFrame(timer)
+}, 1000)
+```
+
+首先 `requestAnimationFrame` 自带函数节流功能，基本可以保证在 16.6 毫秒内只执行一次（不掉帧的情况下），并且该函数的延时效果是精确的，没有其他定时器时间不准的问题，当然你也可以通过该函数来实现 `setTimeout`。
+
+###  18. 对象创建的方式有哪些？
+
+一般使用字面量的形式直接创建对象，但是这种创建方式对于创建大量相似对象的时候，会产生大量的重复代码。但 js和一般的面向对象的语言不同，在 ES6 之前它没有类的概念。但是可以使用函数来进行模拟，从而产生出可复用的对象创建方式，常见的有以下几种：
+
+（1）第一种是工厂模式，工厂模式的主要工作原理是用函数来封装创建对象的细节，从而通过调用函数来达到复用的目的。但是它有一个很大的问题就是创建出来的对象无法和某个类型联系起来，它只是简单的封装了复用代码，而没有建立起对象和类型间的关系。
+
+
+
+（2）第二种是构造函数模式。js 中每一个函数都可以作为构造函数，只要一个函数是通过 new 来调用的，那么就可以把它称为构造函数。执行构造函数首先会创建一个对象，然后将对象的原型指向构造函数的 prototype 属性，然后将执行上下文中的 this 指向这个对象，最后再执行整个函数，如果返回值不是对象，则返回新建的对象。因为 this 的值指向了新建的对象，因此可以使用 this 给对象赋值。构造函数模式相对于工厂模式的优点是，所创建的对象和构造函数建立起了联系，因此可以通过原型来识别对象的类型。但是构造函数存在一个缺点就是，造成了不必要的函数对象的创建，因为在 js 中函数也是一个对象，因此如果对象属性中如果包含函数的话，那么每次都会新建一个函数对象，浪费了不必要的内存空间，因为函数是所有的实例都可以通用的。
+
+
+
+（3）第三种模式是原型模式，因为每一个函数都有一个 prototype 属性，这个属性是一个对象，它包含了通过构造函数创建的所有实例都能共享的属性和方法。因此可以使用原型对象来添加公用属性和方法，从而实现代码的复用。这种方式相对于构造函数模式来说，解决了函数对象的复用问题。但是这种模式也存在一些问题，一个是没有办法通过传入参数来初始化值，另一个是如果存在一个引用类型如 Array 这样的值，那么所有的实例将共享一个对象，一个实例对引用类型值的改变会影响所有的实例。
+
+
+
+（4）第四种模式是组合使用构造函数模式和原型模式，这是创建自定义类型的最常见方式。因为构造函数模式和原型模式分开使用都存在一些问题，因此可以组合使用这两种模式，通过构造函数来初始化对象的属性，通过原型对象来实现函数方法的复用。这种方法很好的解决了两种模式单独使用时的缺点，但是有一点不足的就是，因为使用了两种不同的模式，所以对于代码的封装性不够好。
+
+
+
+（5）第五种模式是动态原型模式，这一种模式将原型方法赋值的创建过程移动到了构造函数的内部，通过对属性是否存在的判断，可以实现仅在第一次调用函数时对原型对象赋值一次的效果。这一种方式很好地对上面的混合模式进行了封装。
+
+
+
+（6）第六种模式是寄生构造函数模式，这一种模式和工厂模式的实现基本相同，我对这个模式的理解是，它主要是基于一个已有的类型，在实例化时对实例化的对象进行扩展。这样既不用修改原来的构造函数，也达到了扩展对象的目的。它的一个缺点和工厂模式一样，无法实现对象的识别。
